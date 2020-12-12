@@ -21,9 +21,9 @@ class RequestParser
      *
      * @return \Notihnio\RequestParser\RequestDataset|null
      */
-    public static function parse() : ?RequestDataset
+    public static function parse(): ?RequestDataset
     {
-        //find method
+        // find method
         $method = strtoupper($_SERVER['REQUEST_METHOD']);
         $dataset = new RequestDataset();
 
@@ -32,7 +32,7 @@ class RequestParser
             self::$isMultipart = preg_match('/^multipart\/form-data/', $contentType) ? true : false;
         }
 
-        //handle multipart requests
+        // handle multipart requests
         if (self::$isMultipart) {
             $multipartRequest =  MultipartFormDataParser::parse();
             if (!is_null($multipartRequest)) {
@@ -42,24 +42,23 @@ class RequestParser
             return $dataset;
         }
 
-        //handle other requests
-        if ($method == "POST") {
-            $dataset->files = $_FILES;
-            $dataset->params = $_POST;
-            return $dataset;
-        }
+        // handle other requests
+		switch ($method) {
+		case "POST":
+			$dataset->files = $_FILES;
+			$dataset->params = $_POST;
+			return $dataset;
+		case "GET":
+			return $dataset;
+		case "PATCH": case "PUT": case "DELETE":
+			// get form params
+			parse_str(file_get_contents("php://input"), $params);
+			$GLOBALS["_".$method] = $params;
+			$dataset->params = $params;
+			return $dataset;
+		default:
+			// ignore
+		}
 
-        if ($method == "GET") {
-            return $dataset;
-        }
-
-        $GLOBALS["_".$method] = [];
-
-        //get form params
-        parse_str(file_get_contents("php://input"), $params);
-        $GLOBALS["_".$method] = $params;
-        $dataset->params = $params;
-
-        return $dataset;
     }
 }
